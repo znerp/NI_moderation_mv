@@ -37,24 +37,23 @@ max_pc = 25; % maximal number of principal components tested
 K = 10; % number of folds for k-fold cross validation
 n_iter = 10; % number of iterations for the metaloop
 
-% outliers are no longer identified manually, but excluded based on
-% information saved in the table and a threshold indicated below
+% outliers are excluded based on information saved in the table (requires 
+% outliers_beta to be run first) and a threshold indicated below
 remove_outliers = 1
 thresh_outl = 10; % percent of voxels with extreme outliers that are maximally tolerated
 
 %%% paths
-path_tbl = '../../data/m0/tables/multivariate/covs_arcsin_CSF_s6_sub493_dm.csv'; % table with covariates, pacc5 score etc
-path_mask = '../../data/masks/mask_GM35_shoot_0.2_noNaNdm.nii'; % mask to restrict voxel-wise comparison (NaNs in any of the functional images were additionally masked out
+path_table = '/path/to/table/tbl.csv'; % path to table with all subject IDs, covariates, pacc5 score etc
+path_mask = '/path/to/mask/mask.nii'; % path to mask with all relevant voxels (e.g. GM/task-active mask) for restricting the moderation analysis to those 
 
-path_struct_template = '../../data/m0/derivatives/prepr/%s/anat/r3p5rc1anat.nii'; % insert subject ID with sprintf below
-path_func_template = '../../data/m0/derivatives/glm/contrasts/arcsin_CSF_s6/s6_dm_%s.nii'; % insert subject ID with sprintf below
+path_func_template = '/path/to/con_images/%s.nii'; % path to contrast images; subject ID is inserted below
 
-savepath_plots = '../../images/10_CRnetwork_paramGLM/multivariate/dm/moderation_pacc5'; % where should the plots for the cross-validation metrics be saved?
+savepath_plots = '/path/for/saving/plots'; % where should the plots for the cross-validation metrics be saved?
 % set seed (for cv-partition)
 rng(617)
 
 %% set up model variables
-% import table with delta_pacc5
+% import table with all cognitive and demographic information plus IDs
 tbl = readtable(path_tbl,'TreatAsEmpty',{'NA'});
 tbl.Properties.VariableNames{1} = 'ID'; % IDs are already in alphabetical order
 
@@ -65,7 +64,7 @@ if remove_outliers
     outlier_subjs = string(tbl.ID(tbl.(col) > thresh_outl));
     
     % get indices of outlier subjects
-    if length(outlier_subjs) > 0
+    if ~isempty(outlier_subjs)
         idc_outl = [];
         for ii=1:length(tbl.ID)
             if any(strcmp(tbl.ID{ii}, outlier_subjs))
@@ -89,17 +88,14 @@ y = table2array(tbl(:,'pacc5'));
 % anyways, I am making sure now that the functional measures correspond to
 % the exact subjects in the table
 n_subj = height(tbl);
-files_func = cell(n_subj,1); files_struct = cell(n_subj,1);
+files_func = cell(n_subj,1);
 for ii=1:n_subj
     files_func{ii} = sprintf(path_func_template, tbl.ID{ii});
-    files_struct{ii} = sprintf(path_struct_template, tbl.ID{ii});
 end
 
-x_struct = spm_summarise(char(files_struct), path_mask);
 x_func = spm_summarise(char(files_func), path_mask);
 
 n_vox = size(x_func,2);
-% assert(all(size(x_struct) == size(x_func)))
 
 % for saving later
 hdr = spm_data_hdr_read(path_mask);

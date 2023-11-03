@@ -14,6 +14,9 @@
 % Wager Tor D., Lindquist Martin A. High-dimensional multivariate mediation
 % with application to neuroimaging data. Biostatistics. 2018;19:121–136.
 
+% saves an image indicating which voxels have significant moderation
+% coefficients according to bootstrapping (p < 0.05)
+
 
 %%% multivariate moderation model:
 % cognition = b0 + b1*DP + b2_1*fmri_PC1 + b3_1*DP*fmri_PC1 + b2_2*fmri_PC2 + 
@@ -43,13 +46,11 @@ remove_outliers = 1
 thresh_outl = 10; % percent of voxels with extreme outliers that are maximally tolerated
 
 %%% paths
-path_tbl = '../../data/m0/tables/multivariate/covs_arcsin_CSF_s6_sub493_dm.csv'; % table with covariates, pacc5 score etc
-path_mask = '../../data/masks/mask_GM35_shoot_0.2_noNaNdm.nii'; % mask to restrict voxel-wise comparison (NaNs in any of the functional images were additionally masked out
-path_imgs = '../../images/10_CRnetwork_paramGLM/multivariate/dm/moderation_pacc5'; % where the images should be saved
-path_res = '../../data/results/CRnetwork_mv/dm'; % path where the principal components and the results of the model can be saved
+path_table = '/path/to/table/tbl.csv'; % path to table with all subject IDs, covariates, pacc5 score etc
+path_mask = '/path/to/mask/mask.nii'; % path to mask with all relevant voxels (e.g. GM/task-active mask) for restricting the moderation analysis to those 
+path_imgs = '/path/to/save/images'; % where the images of the additive and multiplicative (moderation) effect should be saved (principal component images are saved in the parent folder of that folder)
 
-path_struct_template = '../../data/m0/derivatives/prepr/%s/anat/r3p5rc1anat.nii'; % insert subject ID with sprintf below
-path_func_template = '../../data/m0/derivatives/glm/contrasts/arcsin_CSF_s6/s6_dm_%s.nii'; % insert subject ID with sprintf below
+path_func_template = '/path/to/con_images/%s.nii'; % path to contrast images; subject ID is inserted below
 
 rng(617)
 %% set up model variables
@@ -89,17 +90,14 @@ y = table2array(tbl(:,'pacc5'));
 % anyways, I am making sure now that the functional measures correspond to
 % the exact subjects in the table
 n_subj = height(tbl);
-files_func = cell(n_subj,1); files_struct = cell(n_subj,1);
+files_func = cell(n_subj,1);
 for ii=1:n_subj
     files_func{ii} = sprintf(path_func_template, tbl.ID{ii});
-    files_struct{ii} = sprintf(path_struct_template, tbl.ID{ii});
 end
 
-x_struct = spm_summarise(char(files_struct), path_mask);
 x_func = spm_summarise(char(files_func), path_mask);
 
 n_vox = size(x_func,2);
-% assert(all(size(x_struct) == size(x_func)))
 
 % for saving later
 hdr = spm_data_hdr_read(path_mask);

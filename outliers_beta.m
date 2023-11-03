@@ -5,20 +5,19 @@
 % - 3*IQR or 3rd quartile + 3*IQR) in the distribution of all participants'
 % beta values
 % saves this number (+ the percentage) in the table for every participant 
-% for later usage
+% for later usage (if argument save is set to 1)
 
 
 clear; close all
 %%
-mod = 'dm'; % contrast, e.g. 'dm'
-
-path_table = ['../../data/m0/tables/multivariate/covs_arcsin_CSF_s6_sub493_' mod '.csv']; % table with all subjects
-path_func = '../../data/m0/derivatives/glm/contrasts/arcsin_CSF/%s_%s.nii'; % modality and subject ID are inserted below
-mask = ['../../data/masks/mask_GM35_shoot_0.2_noNaN' mod '.nii'];
+path_table = '/path/to/table/tbl.csv'; % path to table with all participants as well as their cognitive and demographic information
+path_func = '/path/to/con_images/%s.nii'; % path to contrast images; subject ID is inserted below
+path_mask = '/path/to/mask/mask.nii'; % path to mask with all relevant voxels (e.g. GM/task-active mask) 
 
 percent = 10; % how many percent voxels with extreme outliers are maximally tolerated
 
-save = 0 % append number of voxels with extreme outliers to table?
+save = 1 % append number of voxels with extreme outliers to table?
+
 %%
 % choose subset
 T = readtable(path_table);
@@ -26,12 +25,12 @@ N = height(T);
 
 fnames = cell(N,1);
 for ix=1:N
-    fnames{ix} = sprintf(path_func, mod, T.ID{ix});
+    fnames{ix} = sprintf(path_func, T.ID{ix}); % insert subject name based on column ID in the table
 end
 
 files = spm_vol(char(fnames));
 
-Y = spm_summarise(files,mask);
+Y = spm_summarise(files,path_mask);
 
 %% get a feeling for statistics on the different voxels
 nvox = size(Y,2);
@@ -83,8 +82,8 @@ end
 fprintf('\n')
 
 %% also save the number of extreme outliers to the table
-T.(['n_outliers_extreme_' mod]) = n_out;
-T.(['perc_outliers_extreme_' mod]) = n_out / nvox * 100;
+T.('n_outliers_extreme_dm') = n_out;
+T.('perc_outliers_extreme_dm') = n_out / nvox * 100;
 
 if save 
     writetable(T, path_table)
