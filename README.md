@@ -7,7 +7,7 @@ The 4 main scripts require a specification of the paths to a couple of ingredien
 - the contrast images (here assumed to be in the same folder and to contain the subject id in their filename)
 
 1. (optional) outliers_beta.m:   
-   Identification of voxels that are extreme outliers based on the distribution of the beta values of all participants in that voxel.
+   Identification of voxels in the contrast images that are extreme outliers based on the distribution of the beta values of all participants in that voxel. For each participant the percentage of voxels with extreme outliers is saved in the table and can be used for exclusion of these participants in the subsequent stages. 
 2. moderation_mv_cv_metaloop.m:   
    Selection of the optimal number of principal components for the dimensionality reduction of the contrast images.
 3. moderation_mv.m:   
