@@ -6,13 +6,13 @@ The 4 main scripts require a specification of the paths to a couple of ingredien
 - a binary mask that restricts the analyses to relevant voxels (e.g. a mask of grey matter or task-active regions)
 - the contrast images (here assumed to be in the same folder and to contain the subject id in their filename)
 
-1. (optional) outliers_beta.m
+1. (optional) outliers_beta.m:   
    Identification of voxels that are extreme outliers based on the distribution of the beta values of all participants in that voxel.
-2. moderation_mv_cv_metaloop.m
+2. moderation_mv_cv_metaloop.m:   
    Selection of the optimal number of principal components for the dimensionality reduction of the contrast images.
-3. moderation_mv.m
+3. moderation_mv.m:   
    Determination of the moderation coefficients for each voxel. Saves them in a map.
-4. moderation_mv_bt.m
+4. moderation_mv_bt.m:   
    Bootstrapping to identify voxels with significant moderation coefficients.
 
 NOTE: in the scripts for steps 2-4, besides the paths, the covariates to be used in the model have to be adjusted in the appropriate section (marked by %% covariates)
