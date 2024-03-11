@@ -11,8 +11,9 @@
 clear; close all
 %%
 path_table = '/path/to/table/tbl.csv'; % path to table with all participants as well as their cognitive and demographic information
-path_func = '/path/to/con_images/%s.nii'; % path to contrast images; subject ID is inserted below
 path_mask = '/path/to/mask/mask.nii'; % path to mask with all relevant voxels (e.g. GM/task-active mask) 
+
+path_func_template = '/path/to/con_images/%s.nii'; % path to contrast images; subject ID is inserted below
 
 percent = 10; % how many percent voxels with extreme outliers are maximally tolerated
 
@@ -25,7 +26,7 @@ N = height(T);
 
 fnames = cell(N,1);
 for ix=1:N
-    fnames{ix} = sprintf(path_func, T.ID{ix}); % insert subject name based on column ID in the table
+    fnames{ix} = sprintf(path_func_template, T.ID{ix}); % insert subject name based on column ID in the table
 end
 
 files = spm_vol(char(fnames));
