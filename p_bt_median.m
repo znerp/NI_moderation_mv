@@ -1,4 +1,4 @@
-function p = p_bt_median(w,w_boot,do_plot)
+function p = p_bt_median(w,w_boot,rng_seed,do_plot)
 
 % for each voxel: test weight from regression with original data against the
 % sampled null distribution of weights for this voxel
@@ -19,22 +19,26 @@ function p = p_bt_median(w,w_boot,do_plot)
 
 
 %%% Input parameters
-% w      = weights from model with original data
-% w_boot = weights from models with bootstrapped data
-% plot   = boolean to indicate if the pseudo-null distribution and the fitted
-%          normal distribution should be plotted; default: False
+% w         weights from model with original data
+% w_boot    weights from models with bootstrapped data
+% rng_seed  random seed (affects the indices of the randomly chosen voxels)
+% do_plot   boolean to indicate if the pseudo-null distribution and the fitted
+%           normal distribution should be plotted; default: False
 
 % Output: 
 % p      = p values estimated from comparison of a given weight to the
 %          fitted normal distribution
 
 if nargin < 3
-    do_plot = 0;
+   rng_seed = 176; 
+end
+if nargin < 4
+   do_plot = 0;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % set random number generator to a certain number for reproducibility
-rng(19930611)
+rng(rng_seed)
 
 n_vox = size(w,1);
 % choose 10% of the voxels whose median value lies in either the second 

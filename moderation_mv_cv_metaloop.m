@@ -130,7 +130,7 @@ idc_cmplt = find(~pca_only);
 
 % initialize variables for evaluating prediction accuracy
 cv_pred = nan(n_iter,n_subj,max_pc); cv_pred_noInt = cv_pred;
-cv_R = nan(n_iter,K,max_pc); cv_R_noInt = cv_R;
+cv_Rsq = nan(n_iter,K,max_pc); cv_R_noInt = cv_Rsq;
 cv_mae = nan(n_iter,K,max_pc); cv_mae_noInt = cv_mae;
 cv_rmse = nan(n_iter,K,max_pc); cv_rmse_noInt = cv_rmse;
 % implement a metaloop that splits the data into folds differently at
@@ -180,27 +180,14 @@ for it=1:n_iter
             % compare their performance afterwards)
             warning('off','all')
             [b,~,~,~] = lm_lean(X_tr, y_tr);
-            [b_noInt,~,~,~] = lm_lean(X_tr(:,n_pc+1:end), y_tr);
             warning('on','all')
             % predict
             y_pred = X_te*b;
-            y_pred_noInt = X_te(:,n_pc+1:end)*b_noInt;
             
             
             % collect results
             cv_pred(it,idc_te_cmplt,n_pc) = y_pred;
-            ss_res = sum((y_te-y_pred).^2);
-            ss_tot = sum((y_te-mean(y_te)).^2);
-            cv_R(it,ifold,n_pc) = 1 - ss_res/ss_tot;
-            cv_mae(it,ifold,n_pc) = mean(abs(y_pred-y_te));
-            cv_rmse(it,ifold,n_pc) = sqrt(mean((y_pred-y_te).^2));
             
-            cv_pred_noInt(it,idc_te_cmplt,n_pc) = y_pred_noInt;
-            cv_R_noInt(it,ifold,n_pc) = corr(y_pred_noInt, y_te)^2;
-            cv_mae_noInt(it,ifold,n_pc) = mean(abs(y_pred_noInt-y_te));
-            cv_rmse_noInt(it,ifold,n_pc) = sqrt(mean((y_pred_noInt-y_te).^2));
-            
-            %          fprintf('Number of principal components: %d\n', n_pc)
             progress = (ifold-1)*max_pc + n_pc/max_pc;
             goal = max_pc*K;
             waitbar(progress/goal,f)
@@ -210,52 +197,55 @@ for it=1:n_iter
     close(f)
 end
 
-%% plot results 
-% reshape matrices
-R_sq_all = reshape(cv_R, [n_iter*K n_pc]);
-mae_all = reshape(cv_mae, [n_iter*K n_pc]);
-rmse_all = reshape(cv_rmse, [n_iter*K n_pc]);
 
-g = reshape(repmat(1:max_pc,[n_iter*K 1]),[numel(R_sq_all) 1]);
-% R squared in dependence of number of components
+%% comment reviewer 1
+% "one should look at performance (loss) measured on 
+% all out-of-sample data in aggregate. This allows the performance to be 
+% estimated across the same amount of data that is observed, while still 
+% being all left-out data"
+
+y_cpmlt = y(idc_cmplt);
+ss_tot = sum((y_cpmlt-mean(y_cpmlt)).^2);
+cv_Rsq = nan(n_iter,n_pc);
+cv_mae = cv_Rsq;
+cv_rmse = cv_Rsq;
+for it=1:n_iter
+    pred = reshape(cv_pred(it,idc_cmplt,:), [length(idc_cmplt), n_pc]);
+    
+    ss_res = sum((pred - y_cpmlt).^2);
+    cv_Rsq(it,:) = 1 - ss_res/ss_tot;
+    
+    cv_mae(it,:) = mean(abs(pred-y_cpmlt));
+    
+    cv_rmse(it,:) = sqrt(mean((pred-y_cpmlt).^2));
+    
+end
+
+%% plots for oefficient of determination and RMSE
+g = reshape(repmat(1:max_pc,[n_iter 1]),[numel(cv_Rsq) 1]);
+
+% R^2 in dependence of number of components
 figure('Position', [0 0 120*max_pc/5 480])
-boxplot(reshape(cv_R*100,[numel(cv_R) 1]), g)
+boxplot(reshape(cv_Rsq,[numel(cv_Rsq) 1]), g)
 hold on
-plot(1:max_pc, mean(R_sq_all)*100, 'k-o') % plot means as well
+plot(1:max_pc, mean(cv_Rsq), 'k-o') % plot means as well
 xlabel('Number of PCs used in linear model')
-ylabel(['Percent variance in pacc5 explained by model in test set'])
+ylabel('Crossvalidation R^2')
+if ~exist(savepath_plots), mkdir(savepath_plots); end
 saveas(gcf, fullfile(savepath_plots, 'CV_Rsq.png'))
 
 % RMSE in dependence of number of components
-figure('Position', [200 200 120*max_pc/5 480])
+figure('Position', [0 0 120*max_pc/5 480])
 boxplot(reshape(cv_rmse,[numel(cv_rmse) 1]), g)
 hold on
-plot(1:max_pc, mean(rmse_all), 'k-o') % plot means as well
+plot(1:max_pc, mean(cv_rmse), 'k-o') % plot means as well
 xlabel('Number of PCs used in linear model')
 ylabel('RMSE in prediction of pacc5')
 saveas(gcf, fullfile(savepath_plots, 'CV_RMSE.png'))
 
+mean_cv_Rsq = mean(cv_Rsq);
+[~,idx] = sort(mean_cv_Rsq, 'descend');
 
-%% little statement about which model is best
-mean_R_sq = reshape(mean(mean(cv_R,1)), [1 n_pc]);
-mean_rmse = reshape(mean(mean(cv_rmse,1)), [1 n_pc]);
-[~,idx] = sort(mean_R_sq, 'descend');
-[~,idx2] = sort(mean_rmse, 'ascend');
-
-mean_R_sq(idx(1:3))
-idx(1:3)
-mean_rmse(idx2(1:3))
-idx2(1:3)
-
-
-[m1,i1] = max(R_sq_all);
-[m2,i2] = min(rmse_all);
-
-% fprintf('The best model in terms of explained variance in PACC5 for the whole dataset is one with %d PCs.\n It reaches an R^2 of %.2f.\n\n', i1, m1)
-% fprintf('The best model in terms of RMSE in PACC5 predictions for the whole dataset is one with %d PCs.\n It reaches an RMSE of %.2f.\n\n', i2, m2)
-% fprintf('The best model in terms of differences in explained variance in PACC5 for the whole dataset with the full model vs the additive model is one with %d PCs.\n The R^2 of the full model is %.2f higher.\n\n', i3, m3)
-% fprintf('The best model in terms of differences in RMSE in PACC5 predictions for the whole dataset with the full model vs the additive model is one with %d PCs.\n The RMSE of the full model is %.2f lower.\n\n', i4, m4)
-% fprintf('Number of PCs: %d \nR^2: %.4f\n', i1, m1)
-% fprintf('Number of PCs: %d \nRMSE: %.4f\n', i2, m2)
-% fprintf('Number of PCs: %d \nR^2 difference: %.4f\n', i3, m3)
-% fprintf('Number of PCs: %d \nRMSE difference: %.4f\n', i4, m4)
+for ii=1:5
+    fprintf('%d. Number of PCs: %d \tR^2: %.4f\n', ii, idx(ii), mean_cv_Rsq(idx(ii)))
+end
