@@ -7,9 +7,14 @@
 % their contribution. 
 % These moderation coefficients of the distinct voxels undergo a
 % bootstrapping approach in this script in order to allow inference about
-% their significance. The bootstrapping procedure is adapted from the
-% bootstrapping approach in the context of multivariate mediation presented
-% by Chén et al. (2018):
+% their significance. 
+
+% The bootstrapping assesses for each voxel if the 95% confidence intervals
+% contain 0. If they do not, a voxel is judged as significant. 
+
+% At the bottom of the code, another inference strategy via bootstrapping 
+% can be enabled, which was adapted from a bootstrapping approach in the 
+% context of multivariate mediation presented by Chén et al. (2018):
 % Chén Oliver Y., Crainiceanu Ciprian, Ogburn Elizabeth L., Caffo Brian S.,
 % Wager Tor D., Lindquist Martin A. High-dimensional multivariate mediation
 % with application to neuroimaging data. Biostatistics. 2018;19:121–136.
@@ -177,34 +182,50 @@ for it=1:n_iter
 end
 close(f)
 
-%% p values from bootstrap
-% 4. for each voxel: test weight from regression with real data against the
-% samples null distribution of weights for this voxel
-% unlike in the paper, we should not have the problem that the sign of the
-% coefficient is unidentifiable (this is just due to the mediation
-% framework in the paper)
+%% voxelwise inference based on bootstrapped confidence intervals
+% 4. determine confidence intervals and hence significance
+[p_sig_CR, ~, ~] = p_bt_voxelwise(w_boot_CR,0.95); % 95% confidence intervals
+fprintf('\n%d voxels contribute significantly to CR.\n', sum(p_sig_CR))
 
-% Next, we sort the bootstrap distributions for all voxels by their median,
-% and choose voxels whose median value lies in either the second or third 
-% quartile.
-% sort bootstrap distribution for all voxels by their median
-p_all = p_bt_median(w,w_boot,1); % third argument for plotting
-p_sig = p_all<0.05;
-fprintf('\n%d voxels contribute significantly to CR.\n', sum(p_sig))
-
-%% save images
+%% save image that shows voxels with significant CR coefficients
 vol = nan(size(mask));
-% 1. image with p values
-hdr.fname = fullfile(path_imgs, ['p_dm_by_DP_PC_comb' num2str(n_pc) '.nii']);
-hdr.dt(1) = spm_type('float32');
-hdr.descrip = ['p values for dm_by_DP from bootstrapping'];
-vol(mask~=0) = p_all;
-spm_data_write(hdr, vol);
-% 2. binary image indicating which p values were significant
-hdr.fname = fullfile(path_imgs, ['psig05_dm_by_DP_PC_comb' num2str(n_pc) '.nii']);
+% binary image indicating which p values were significant
+hdr.fname = fullfile(path_imgs, ['psig_CI95_dm_by_DP_PC_comb' num2str(n_pc) '.nii']);
 hdr.dt(1) = spm_type('uint8');
-hdr.descrip = ['mask of p values < 0.05 for dm_by_DP from bootstrapping'];
-vol(mask~=0) = p_sig;
+hdr.descrip = ['mask of 95% CI outside 0 for dm_by_DP from voxelwise bootstrapping'];
+vol(mask~=0) = p_sig_CR;
 spm_data_write(hdr, vol);
+
+%% old: inference on bootstrapped coefficients after Chén et al. 
+% % 4. for each voxel: test weight from regression with real data against the
+% % samples null distribution of weights for this voxel
+% % unlike in the paper, we should not have the problem that the sign of the
+% % coefficient is unidentifiable (this is just due to the mediation
+% % framework in the paper)
+% 
+% % Next, we sort the bootstrap distributions for all voxels by their median,
+% % and choose voxels whose median value lies in either the second or third 
+% % quartile.
+% % sort bootstrap distribution for all voxels by their median
+% p_all = p_bt_median(w,w_boot,1); % third argument for plotting
+% p_sig = p_all<0.05;
+% fprintf('\n%d voxels contribute significantly to CR.\n', sum(p_sig))
+% 
+% 
+% 
+% %% save images
+% vol = nan(size(mask));
+% % 1. image with p values
+% hdr.fname = fullfile(path_imgs, ['p_dm_by_DP_PC_comb' num2str(n_pc) '.nii']);
+% hdr.dt(1) = spm_type('float32');
+% hdr.descrip = ['p values for dm_by_DP from bootstrapping'];
+% vol(mask~=0) = p_all;
+% spm_data_write(hdr, vol);
+% % 2. binary image indicating which p values were significant
+% hdr.fname = fullfile(path_imgs, ['psig05_dm_by_DP_PC_comb' num2str(n_pc) '.nii']);
+% hdr.dt(1) = spm_type('uint8');
+% hdr.descrip = ['mask of p values < 0.05 for dm_by_DP from bootstrapping'];
+% vol(mask~=0) = p_sig;
+% spm_data_write(hdr, vol);
    
 
